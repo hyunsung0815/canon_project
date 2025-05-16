@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" href="{% static 'result_style.css' %}">
+    <title>Document</title>
+</head>
+<body>
+    <div id="area1">
+        <div id="list">
+            <div style="cursor: pointer;">객체탐지</div>
+            <div style="cursor: pointer;">학습</div>
+            <div style="cursor: pointer;">About</div>
+            <div id="team_name">Canon Korea_5조</div>
+        </div>
+    </div>
+    <div id="beeline"></div>
+    <div id="area2">
+        <div id="camera">
+            <div id="camera_img"></div>
+            <div id="camera_text">카메라 미리보기</div>
+        </div>
+        <div id="setting">
+            <div id="setting_title">결과</div>
+            <div id="beeline2"></div>
+            <div id="line">
+                <div id="circle"></div>
+                <div class="text number1"></div>
+            </div>
+            <input type="file" id="fileInput" style="display: none;">
+            <div class="text">로그</div>
+            <div id="empty"></div>
+            <div class="textbox">
+                <div id="table_title">
+                    <div id="time">Time</div>
+                    <div id="model">Model</div>
+                    <div id="result">Result</div>
+                </div>
+                <table id="resultTable">
+                    <colgroup>
+                        <col style="width: 33%;">
+                        <col style="width: 33%;">
+                        <col style="width: 34%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="empty1"></div>
+            <div id="area3">
+                <div onclick="location.href='{% url 'index'%}'" class="btn1 number2">중단(뒤로)</div>
+                <div class="btn1 resetTableBtn">초기화</div>
+            </div> 
+        </div>
+    </div>
+    <script src="../static/result_script.js"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" href="{% static 'main_style.css' %}">
+    <title>Document</title>
+</head>
+<body>
+    <div id="area1">
+        <div id="list">
+            <div style="cursor: pointer;">객체탐지</div>
+            <div style="cursor: pointer;">학습</div>
+            <div style="cursor: pointer;">About</div>
+            <div id="team_name">Canon Korea_5조</div>
+        </div>
+    </div>
+    <div id="beeline"></div>
+    <div id="area2">
+        <div id="camera">
+            <div id="camera_img"></div>
+            <div id="camera_text">카메라 미리보기</div>
+        </div>
+        <div id="setting">
+            <div id="setting_title">입력 선택</div>
+            <div id="beeline2"></div>
+            <div class="text">카메라</div>
+            <div id="option">
+                <div id="option1" class="select-option">동영상</div>
+                <div id="option-separator">/</div>
+                <div id="option2" class="select-option">이미지</div>
+            </div>
+            <div class="textbox"><p id="fileName"></p></div>
+            <input type="file" id="fileInput" style="display: none;">
+            <div class="text">모델 선택</div>
+            <div id="empty"></div>
+            <div class="textbox">
+                <select id="options">
+                    <option value="1">YOLOm8</option>
+                    <option value="2">항목 2</option>
+                    <option value="3">항목 3</option>
+                </select>
+            </div>
+            <div id="empty1"></div>
+            <div class="btn1" data-url="{% url 'result' %}">실행</div>
+        </div>
+    </div>
+    <script src="../static/script.js"></script>
+</body>
+</html>

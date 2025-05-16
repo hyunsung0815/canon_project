@@ -1,0 +1,217 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    background-color: #F8F7F8;
+}
+#area1 {
+    margin-top: 7px;
+    height: 93px;
+    display: flex;
+    align-items: center;
+}
+
+#team_name {
+    font-size: 36px;
+    padding: 16px;
+    width: 328px;
+    margin-left: 650px;
+    white-space: nowrap;
+}
+
+#list {
+    flex: 1;
+    text-align: center;
+    font-size: 16px;
+    width: 366px;
+    margin-left: 100px;
+    display: flex;
+    align-items: center;
+    gap: 75px;
+    white-space: nowrap;
+}
+
+#beeline {
+    width: 1380px;
+    height: 1px;
+    margin: 0 auto;
+    background-color: #000000;
+    margin-top: -22px;
+}
+#area2 {
+    margin-top: 90px;
+    height: 480px;
+    display: flex;
+    align-items: center;
+}
+
+#camera {
+    margin-left: 155px;
+    border-radius: 30px;
+    width: 626.23px;
+    height: 450px;
+    background-color: #E3E2E2;
+    cursor: pointer;
+    background-size: cover;           
+    background-position: center;      
+    background-repeat: no-repeat;
+    overflow: hidden;
+    position: relative;
+}
+
+#setting {
+    margin-left: 80px;
+    border-radius: 30px;
+    width: 478px;
+    height: 450px;
+    background-color: #FFFFFF;
+    box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.25);
+}
+
+#camera_img {
+    width: 130px;
+    height: 130px;
+    margin: 0 auto;
+    margin-top: 133px;
+    background-image: url("img/camera.png");
+    background-size: cover;
+    background-position: center 60%;
+}
+
+#camera_text {
+    margin-top: 5px;
+    font-size: 36px;
+    text-align: center;
+}
+
+#setting_title {
+    margin-top: 18px;
+    margin-left: 31px;
+    padding: 12px;
+    font-size: 34px;
+}
+
+#beeline2 {
+    width: 382px;
+    height: 1px;
+    margin-left: 40px;
+    background-color: #000000;
+}
+
+#line {
+    display: flex;
+    height: 49px;
+}
+
+#circle {
+    margin-top: 31.5px;
+    margin-left: 55px;
+    width: 6px;
+    height: 6px;
+    border-radius: 40px;
+    background-color: #000000;
+}
+
+.text {
+    margin-top: 20px;
+    margin-left: 40px;
+    font-size: 24px;
+}
+
+.number1 {
+    margin-left: 10px;
+    display: block;
+}
+
+#empty{
+    height: 3px;
+}
+
+.textbox {
+  margin-top: 5px;
+  width: 382px;
+  height: 157px;
+  overflow-y: auto;
+  border-radius: 5px;
+  border: #000000 1px solid;
+  margin-left: 35px;
+  display: flex;
+  flex-direction: column;
+}
+
+.textbox::-webkit-scrollbar {
+  width: 6px;
+}
+
+.textbox::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+#table_title {
+  width: 100%;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 0.5px solid #000;
+}
+
+#time, #model, #result {
+  flex: 1;
+  font-size: 14px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.scroll-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+#resultTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#resultTable tbody td {
+  text-align: center;
+}
+
+#empty1{
+    height: 30px;
+}
+
+#area3 {
+    display: flex;
+    height: 52.09px;
+}
+
+.number2 {
+    margin-left: 140px;
+}
+.resetTableBtn {
+    margin-left: 8px;
+}
+
+.btn1 {
+    background-color: #000000;
+    font-size: 20px;
+    width: 130px;
+    height: 42.09px;
+    color: #FFFFFF;
+    border-radius: 32px;
+    text-align: center;
+    padding: 9.5px;
+    transition: all 0.3s ease;
+    box-shadow: 2px 3px 5px rgba(0, 0, 0, 0.25);
+}
+
+.btn1:hover {
+    border: #FFFFFF solid 0.5px;
+    background-color: #FFFFFF;
+    color: #000000;
+    cursor: pointer;
+}
