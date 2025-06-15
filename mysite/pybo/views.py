@@ -19,35 +19,105 @@ model = YOLO(model_path)
 
 @csrf_exempt
 def detect(request):
-    if request.method == 'POST' and request.FILES.get('media'):
-        file = request.FILES['media']
-        img_bytes = file.read()
-        img_np = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
+    if request.method == 'POST' and request.FILES.getlist('media'):
+        files = request.FILES.getlist('media')
 
-        results = model(img)[0]
-        detections = []
+        # ✅ 1. 단일 이미지 처리
+        if len(files) == 1:
+            file = files[0]
+            if not file.content_type.startswith("image/"):
+                return JsonResponse({'status': 'error', 'message': '이미지 파일이 아닙니다'}, status=400)
 
-        for box in results.boxes:
-            cls_id = int(box.cls[0].item())
-            confidence = round(float(box.conf[0].item()), 3)
-            xyxy = box.xyxy[0].tolist()
-            class_name = model.names[cls_id]
+            img_bytes = file.read()
+            img_np = np.frombuffer(img_bytes, np.uint8)
+            img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
 
-            detections.append({
-                'class_name': class_name,
-                'confidence': confidence,
-                'x1': int(xyxy[0]),
-                'y1': int(xyxy[1]),
-                'x2': int(xyxy[2]),
-                'y2': int(xyxy[3]),
+            results = model(img)[0]
+            detections = []
+
+            for box in results.boxes:
+                cls_id = int(box.cls[0].item())
+                confidence = round(float(box.conf[0].item()), 3)
+                class_name = model.names[cls_id]
+
+                detections.append({
+                    'class_name': class_name,
+                    'confidence': confidence,
+                })
+
+            _, buffer = cv2.imencode('.jpg', results.plot())
+            image_hex = buffer.tobytes().hex()
+
+            return JsonResponse({
+                'status': 'ok',
+                'type': 'single',
+                'detections': detections,
+                'image': image_hex
             })
 
-        _, buffer = cv2.imencode('.jpg', results.plot())
-        return JsonResponse({
-            'status': 'ok',
-            'detections': detections,
-            'image': buffer.tobytes().hex()
-        })
+        # ✅ 2. 여러 이미지 처리
+        else:
+            all_detections = []
+            all_images = []
 
-    return JsonResponse({'status': 'error', 'message': 'No file provided'}, status=400)
+            for file in files:
+                if not file.content_type.startswith("image/"):
+                    continue
+
+                img_bytes = file.read()
+                img_np = np.frombuffer(img_bytes, np.uint8)
+                img = cv2.imdecode(img_np, cv2.IMREAD_COLOR)
+
+                results = model(img)[0]
+                detections = []
+
+                for box in results.boxes:
+                    cls_id = int(box.cls[0].item())
+                    confidence = round(float(box.conf[0].item()), 3)
+                    class_name = model.names[cls_id]
+
+                    detections.append({
+                        'class_name': class_name,
+                        'confidence': confidence,
+                    })
+
+                _, buffer = cv2.imencode('.jpg', results.plot())
+                image_hex = buffer.tobytes().hex()
+
+                all_detections.append(detections)
+                all_images.append(image_hex)
+
+            return JsonResponse({
+                'status': 'ok',
+                'type': 'multiple',
+                'detections': all_detections,
+                'images': all_images
+            })
+
+    return JsonResponse({'status': 'error', 'message': '이미지 파일이 없습니다'}, status=400)
+
+@csrf_exempt
+def upload_video(request):
+    if request.method == 'POST' and request.FILES.get('media'):
+        file = request.FILES['media']
+
+        # MIME 확인
+        if not file.content_type.startswith("video/"):
+            return JsonResponse({'status': 'error', 'message': '동영상 파일이 아닙니다'}, status=400)
+
+        # 고유 파일명 생성
+        import uuid
+        file_name = f"video_{uuid.uuid4().hex}.mp4"
+
+        # 저장 경로 지정 (media/ 폴더에 저장)
+        from django.conf import settings
+        save_path = os.path.join(settings.MEDIA_ROOT, file_name)
+        with open(save_path, 'wb+') as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+
+        # URL 생성
+        video_url = settings.MEDIA_URL + file_name
+        return JsonResponse({'status': 'ok', 'video_url': video_url})
+
+    return JsonResponse({'status': 'error', 'message': '파일이 없습니다'}, status=400)

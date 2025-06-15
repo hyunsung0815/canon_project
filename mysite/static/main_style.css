@@ -135,12 +135,21 @@ body {
     border-radius: 5px;
     border: #000000 1px solid;
     margin-left: 35px;
+    overflow-x: hidden;            
+    overflow-y: hidden;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.textbox:hover {
+    overflow-x: auto;
 }
 
 #fileName {
+    display: inline-block;
     margin-left: 13px;
     margin-top: 14px;
-    font-size: 18px;
+    font-size: 18px;       
 }
 
 .textbox select {

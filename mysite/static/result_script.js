@@ -1,9 +1,10 @@
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   console.log("✅ 복원 코드 실행됨");
 
   const type = localStorage.getItem("mediaType");
   const videoData = localStorage.getItem("mediaData");
   const imageHex = localStorage.getItem("mediaPreview");
+  const imageList = JSON.parse(localStorage.getItem("mediaDataList") || "[]");
   const name = localStorage.getItem("mediaName");
 
   const camera = document.getElementById("camera");
@@ -20,101 +21,304 @@ window.addEventListener("DOMContentLoaded", () => {
     fileName.textContent = name;
   }
 
-  // ✅ 1. 이미지 복원
-  if (imageHex) {
-    console.log("✅ YOLO 결과 이미지 복원");
-    const binary = new Uint8Array(imageHex.match(/.{1,2}/g).map(h => parseInt(h, 16)));
-    const blob = new Blob([binary], { type: "image/jpeg" });
-    const url = URL.createObjectURL(blob);
-    camera.style.backgroundImage = `url(${url})`;
-    camera.style.backgroundSize = "cover";
-    camera.style.backgroundPosition = "center";
-    camera.style.backgroundRepeat = "no-repeat";
-    if (cameraImg) cameraImg.style.display = "none";
-    if (cameraText) cameraText.style.display = "none";
-  }
+  // ✅ 1. 동영상 복원
+  if (type === "video" && videoData) {
+    console.log("✅ 동영상 복원 및 실시간 YOLO 추론 시작");
 
-  // ✅ 2. 동영상 복원
-  else if (type === "video" && videoData) {
-    console.log("✅ 동영상 복원");
     const video = document.createElement("video");
     video.src = videoData;
     video.controls = true;
     video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
     video.style.width = "100%";
     video.style.height = "100%";
     video.style.objectFit = "cover";
+
+    const camera = document.getElementById("camera");
     camera.innerHTML = "";
     camera.appendChild(video);
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const table = document.querySelector("#resultTable tbody");
+
+    function processNextFrame() {
+      const timeInVideo = video.currentTime;
+      const hhmmss = new Date(timeInVideo * 1000).toISOString().substr(11, 8);
+      if (video.paused || video.ended) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        const formData = new FormData();
+        formData.append("media", blob);
+
+        try {
+          const response = await fetch("/detect/", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            console.error("❌ YOLO 응답 실패:", text);
+            return;
+          }
+
+          const result = await response.json();
+          const now = new Date().toLocaleTimeString();
+
+          let detections = [];
+
+          if (Array.isArray(result.detections[0])) {
+            detections = result.detections.map((detList) => {
+              if (!Array.isArray(detList) || detList.length === 0) {
+                return [{
+                  class_name: "no_target",
+                  confidence: 0,
+                  mediaType: "video",
+                  time: now,
+                  fileName: `video_${hhmmss}`
+                }];
+              } else {
+                return detList.map(det => ({
+                  class_name: det.class_name || "no_target",
+                  confidence: det.confidence || 0,
+                  mediaType: "video",
+                  time: now,
+                  fileName: `video_${hhmmss}`
+                }));
+              }
+            }).flat();
+          } else {
+            if (Array.isArray(result.detections) && result.detections.length > 0) {
+              detections = result.detections.map(det => ({
+                class_name: det.class_name || "no_target",
+                confidence: det.confidence || 0,
+                mediaType: "video",
+                time: now,
+                fileName: `video_${hhmmss}`
+              }));
+            } else {
+              detections = [{
+                class_name: "no_target",
+                confidence: 0,
+                mediaType: "video",
+                time: now,
+                fileName: `video_${hhmmss}`
+              }];
+            }
+          }
+
+          const log = JSON.parse(localStorage.getItem("detectionResultLog") || "[]");
+          const updatedLog = log.concat(detections.map(det => ({
+            ...det,
+            time: now,
+            fileName: det.fileName || "video_frame"
+          })));
+          localStorage.setItem("detectionResultLog", JSON.stringify(updatedLog));
+
+          detections.forEach(det => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${det.time || now}</td>
+              <td>${det.fileName || "-"}</td>
+              <td>${det.class_name || "no_target"}</td>
+            `;
+            table.appendChild(row);
+
+            const targetBox = document.querySelector(".text.number1");
+            if (targetBox) targetBox.textContent = det.class_name || "no_target";
+          });
+
+          setTimeout(processNextFrame, 1000);
+        } catch (err) {
+          console.error("❌ YOLO 추론 중 오류:", err);
+        }
+      }, "image/jpeg");
+    }
+
+    video.addEventListener("playing", () => {
+      console.log("✅ 재생 시작됨");
+      processNextFrame();
+    });
   }
 
-  else {
-    console.warn("⚠️ mediaPreview 또는 mediaData가 비어 있음");
+  // ✅ 2. 이미지 복원
+  else if (type === "image") {
+    if (imageList.length > 1) {
+      console.log("✅ 다중 이미지 복원");
+      camera.innerHTML = "";
+      imageList.forEach(src => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.style.width = "100px";
+        img.style.margin = "5px";
+        camera.appendChild(img);
+      });
+    } else if (imageHex) {
+      console.log("✅ 단일 이미지 복원");
+      const binary = new Uint8Array(imageHex.match(/.{1,2}/g).map(h => parseInt(h, 16)));
+      const blob = new Blob([binary], { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      camera.style.backgroundImage = `url(${url})`;
+      camera.style.backgroundSize = "cover";
+      camera.style.backgroundPosition = "center";
+      camera.style.backgroundRepeat = "no-repeat";
+    } else {
+      console.warn("⚠️ 복원할 이미지가 없습니다.");
+    }
+
+    if (cameraImg) cameraImg.style.display = "none";
+    if (cameraText) cameraText.style.display = "none";
+  }
+  else if (type === "camera") {
+    try {
+      // ✅ 1. 웹캠 연결
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.style.width = "100%";
+      video.style.height = "100%";
+      video.style.objectFit = "cover";
+
+      camera.innerHTML = "";
+      camera.appendChild(video);
+
+      if (cameraImg) cameraImg.style.display = "none";
+      if (cameraText) cameraText.style.display = "none";
+
+      // ✅ 2. YOLO 실시간 감지 시작
+      startAutoCaptureFromVideo(video, 1000);
+
+      // ✅ 3. 복원 이미지가 있다면 배경으로 표시 (선택사항)
+      if (imageHex) {
+        const binary = new Uint8Array(imageHex.match(/.{1,2}/g).map(h => parseInt(h, 16)));
+        const blob = new Blob([binary], { type: "image/jpeg" });
+        const url = URL.createObjectURL(blob);
+        camera.style.backgroundImage = `url(${url})`;
+        camera.style.backgroundSize = "cover";
+        camera.style.backgroundPosition = "center";
+        camera.style.backgroundRepeat = "no-repeat";
+      }
+
+    } catch (err) {
+      console.error("❌ 카메라 접근 실패:", err);
+      cameraText.textContent = "⚠️ 카메라 연결 실패";
+    }
   }
 
-  // ✅ 3. YOLO 결과 테이블 복원
-  const detections = JSON.parse(localStorage.getItem("detectionResultLog") || "[]");
+  const detectionLog = JSON.parse(localStorage.getItem("detectionResultLog") || "[]");
   const newDetections = JSON.parse(localStorage.getItem("detectionResult") || "[]");
-  const updatedDetections = detections.concat(newDetections);
-  localStorage.setItem("detectionResultLog", JSON.stringify(updatedDetections));
+  const isAlreadyMerged = sessionStorage.getItem("mergedToLog") === "true";
 
-  const table = document.querySelector("#resultTable tbody");
-  if (!table) {
-    console.error("❌ #resultTable tbody 요소를 찾을 수 없습니다");
-    return;
+  const updatedDetections = isAlreadyMerged
+    ? detectionLog
+    : [...detectionLog, ...newDetections];
+
+  if (!isAlreadyMerged) {
+    localStorage.setItem("detectionResultLog", JSON.stringify(updatedDetections));
+    sessionStorage.setItem("mergedToLog", "true");
   }
 
-  updatedDetections.forEach(det => {
-    const row = document.createElement("tr");
-    const className = det.class_name || "no_target";
+  updateResultTable(updatedDetections);
 
+  document.querySelector(".resetTableBtn")?.addEventListener("click", () => {
+    document.querySelector("#resultTable tbody").innerHTML = "";
+    localStorage.removeItem("detectionResultLog");
+    alert("✅ 테이블과 기록이 초기화되었습니다!");
+  });
+
+  const log = JSON.parse(localStorage.getItem("detectionResultLog") || "[]");
+  console.log("✅ 복원 대상 결과 수:", log.length);
+  console.table(log);
+});
+
+function updateResultTable(detections, { reset = true } = {}) {
+  const table = document.querySelector("#resultTable tbody");
+  if (!table) return;
+
+  if (reset) {
+    table.innerHTML = "";
+  }
+
+  detections.forEach(det => {
+    const row = document.createElement("tr");
     row.innerHTML = `
       <td>${det.time || "-"}</td>
-      <td>${det.model || "YOLOv8m"}</td>
-      <td>${className}</td>
+      <td>${det.fileName || "-"}</td>
+      <td>${det.class_name || "no_target"}</td>
     `;
     table.appendChild(row);
-
-    const targetBox = document.querySelector(".text.number1");
-    if (targetBox) {
-      targetBox.textContent = className;
-    }
   });
 
-  if (updatedDetections.length === 0) {
-  console.warn("⚠️ YOLO 결과가 비어있습니다 (detectionResult 없음)");
-
-  // ✅ 텍스트 박스에 no_target 표시
   const targetBox = document.querySelector(".text.number1");
-  if (targetBox) {
-    targetBox.textContent = "no_target";
+  if (targetBox && detections.length > 0) {
+    targetBox.textContent = detections[detections.length - 1].class_name || "no_target";
   }
+}
 
-  // ✅ 테이블에도 no_target 행 추가
-  const table = document.querySelector("#resultTable tbody");
-  if (table) {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>-</td>
-      <td>YOLOv8m</td>
-      <td>no_target</td>
-    `;
-    table.appendChild(row);
-  }
-  }
+function startAutoCaptureFromVideo(video, interval = 1000) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
 
-  document.querySelector(".resetTableBtn").addEventListener("click", () => {
-  const tbody = document.querySelector("#resultTable tbody");
-  if (tbody) {
-    tbody.innerHTML = "";
-  }
+  setInterval(() => {
+    if (!video || video.readyState < 2) return;
 
-  localStorage.removeItem("detectionResultLog");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  alert("✅ 테이블과 기록이 초기화되었습니다!");
-  });
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
 
-  if (updatedDetections.length === 0) {
-    console.warn("⚠️ YOLO 결과가 비어있습니다");
-  }
-});
+      const formData = new FormData();
+      formData.append("media", blob, "frame.jpg");
+
+      try {
+        const response = await fetch("/detect/", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        const now = new Date().toLocaleTimeString();
+
+        const detections = result.detections?.length > 0
+          ? result.detections
+          : [{ class_name: "no_target", confidence: 0 }];
+
+        const formatted = detections.map(det => ({
+          ...det,
+          time: now,
+          mediaType: "camera",
+          fileName: "webcam"
+        }));
+
+        const prev = JSON.parse(localStorage.getItem("detectionResultLog") || "[]");
+        const updated = prev.concat(formatted);
+
+        localStorage.setItem("detectionResult", JSON.stringify(formatted));
+        localStorage.setItem("detectionResultLog", JSON.stringify(updated));
+
+        if (result.image) {
+          localStorage.setItem("mediaPreview", result.image);
+        }
+
+        updateResultTable(formatted, { reset: false });
+
+      } catch (err) {
+        console.error("❌ YOLO 전송 실패:", err);
+      }
+    }, "image/jpeg");
+  }, interval);
+}
